@@ -1,575 +1,432 @@
+data segment
+   
 
-name "calc2"
+x_float_count db 0
+_TEN     dw 10d
+x        dw 0    
+y        dw 0
+buffer   db 6 dup(0),'$'
+lenth    dw 0
+operand1 db 0
+operand2 db 0
+key      db 0  
+ng       db 0
+xsighn   db 0
+;---------------------------------------------------
+ 
+;print lines
+;---------------------------------------------------                           
+    l0   db 201,21 dup(205),187,'$'
+    l8   db 186,21 dup(' '),186,'$';second line
+    
+    l1   db 186,'   ',201,13 dup(205),187,'   ',186,'$'
+    l2   db 186,'   ',186,13 dup(' '),186,'   ',186,'$'
+    l3   db 186,'   ',200,13 dup(205),188,'   ',186,'$'
+    
+    l4   db 186,' ',218,196,191,' ',218,196,191,' ',218,196,191,' ',218,196,191,' ',218,196,191,' ',186,'$'
+    l4_2 db 186,' ',218,9 dup(196),191,' ',218,196,191,' ',179,' ',179,' ',186,'$'
+    l5   db 186,' ',179,' ',179,' ',179,' ',179,' ',179,' ',179,' ',179,' ',179,' ',179,' ',179,' ',186,'$'
+    l5_2 db 186,' ',192,196,217,' ',192,196,217,' ',192,196,217,' ',192,196,217,' ',179,' ',179,' ',186,'$'
+    l5_3 db 186,' ',179,9 dup(' '),179,' ',179,' ',179,' ',179,' ',179,' ',186,'$'
+    l6   db 186,' ',192,196,217,' ',192,196,217,' ',192,196,217,' ',192,196,217,' ',192,196,217,' ',186,'$'
+    l6_2 db 186,' ',192,9 dup(196),217,' ',192,196,217,' ',192,196,217,' ',186,'$'
+    l7   db 200,21 dup(205),188,'$'
+;---------------------------------------------------                           
+ends
 
-; command prompt based simple calculator (+,-,*,/) for 8086.
-; example of calculation:
-; input 1 <- number:   10 
-; input 2 <- operator: - 
-; input 3 <- number:   5 
-; ------------------- 
-;     10 - 5 = 5 
-; output  -> number:   5
+;---------------------------------------------------
+gotoxy macro x,y        ;move cursor
+       pusha
+       mov dl,x
+       mov dh,y
+       mov bx,0
+       mov ah,02h
+       int 10h 
+       popa
+endm
+;--------------------------------------------------- 
+putstr macro buffer     ;print string
+       pusha
+       mov ah,09h
+       mov dx,offset buffer
+       int 21h 
+       popa
+endm
+;---------------------------------------------------
+putch  macro char,color ;print character
+       pusha
+       mov ah,09h
+       mov al,char
+       mov bh,0
+       mov bl,color
+       mov cx,1
+       int 10h 
+       popa
+endm
+;---------------------------------------------------
+clear  macro buf
+       lea si,buf
+       mov [si],' '
+       mov [si+1],' '
+       mov [si+2],' '
+       mov [si+3],' '
+       mov [si+4],' '
+       mov [si+5],' '
+       gotoxy 15,3
+       putstr buf
+endm
+;---------------------------------------------------
+number_in  macro  n,operand,lenth
+    local l1,l1_2,l1_2_1,l1_3
+    local l2,l3,l4
+    local next_step, store_operand
+
+    pusha
+    
+      
+    mov lenth, 0  
+    lea si, buffer         
+    
+l1:
+    mov ah, 08h            ;nhap ki tu vao ban phim 
+    int 21h
+    mov key, al
+    
+l1_2: 
+    cmp lenth, 0
+    jne next_step
+    clear buffer       
+    putstr buffer          ;in ra chuoi rong , ghi de len man hinh
+    gotoxy 17,3
+
+next_step:
+    cmp al, '0'            ; kiem tra xem ki tu co phai la so
+    jb l2
+    cmp al, '9'
+    ja l2
+
+l1_3:
+    mov al, key
+    mov [si], al
+    pusha
+    mov dl, al
+    mov ah, 02h            ; in ra so da nhap vao 
+    int 21h
+    popa
+    inc si
+    inc lenth
+    jmp l1
+
+; ==============================
+l2: 
+    cmp al, '+'
+    je store_operand
+    cmp al, '-'
+    je store_operand
+    cmp al, '*'
+    je store_operand
+    cmp al, '/'
+    je store_operand
+    cmp al, '='
+    je store_operand
+    jmp l1  
+
+; ==============================
+store_operand:
+    cmp lenth, 0
+    je l4  
+    gotoxy 26,3
+    mov operand, al  
+
+ 
+    mov dl, operand           ;in ra toan tu ( + - * / ) da nhap 
+    mov ah, 02h
+    int 21h
+
+   
+    lea si, buffer
+    mov cx, lenth
+    mov dx, 0
+    mov bx, 10
+
+l3:
+    mov ax, dx
+    mul bx
+    mov dx, ax
+    mov ah, 0
+    mov al, [si]
+    sub al, 48
+    add dx, ax
+    inc si
+    loop l3
+
+    mov n, dx
+
+l4:
+    mov n, dx
+    gotoxy 24,3
+    popa
+endm
+
+ 
+     
+;---------------------------------------------------
+putrez macro buffer,x
+       local next_digit,pz1,pz2
+       local nex1,nex2
+     
+       pusha
+       mov ax,x             
+       mov cl,x_float_count
+       clear buffer
+       lea si,buffer               
+       mov bx,10             
+       mov [si+5],'0'
+       mov [si+4],'.'
+       mov [si+3],'0'
+       
+    ;........................                         
+       next_digit: 
+        cmp cl,0
+        jne nex1
+        cmp x_float_count,0
+        jne nex2
+        
+        mov [si+5],'0'
+        dec si
+    nex2:    
+        mov dl,'.'
+        mov [si+5],dl
+        dec si
+        dec cl
+        dec x_float_count
+        jmp next_digit
+         
+    nex1:
+        mov dx,0            ; buffer 
+        div bx             
+        add dl,48          
+        mov [si+5],dl
+        dec si
+        dec cl
+        cmp ax,0
+        jne next_digit
+         
+     
+   ;.........................          
+       gotoxy 17,3          ;print buffer
+       putstr buffer 
+        
+      
+       
+   pz1:
+       cmp xsighn,1
+       jne pz2
+       gotoxy 15,3
+       putch '-' , 15
+   pz2:
+       popa
+endm
+;---------------------------------------------------
+reset macro
+       mov x,0
+       mov y,0 
+       mov xsighn,0       
+       clear buffer
+       mov key,0
+       mov operand1,0
+       mov operand2,0
+endm
 
 
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; this maro is copied from emu8086.inc ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; this macro prints a char in AL and advances
-; the current cursor position:
-PUTC    MACRO   char
-        PUSH    AX
-        MOV     AL, char
-        MOV     AH, 0Eh
-        INT     10h     
-        POP     AX
-ENDM
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-
-
-org 100h
-
-jmp start
-
-
-; define variables:
-
-msg0 db "note: calculator works with integer values only.",0Dh,0Ah
-     db "to learn how to output the result of a float division see float.asm in examples",0Dh,0Ah,'$'
-msg1 db 0Dh,0Ah, 0Dh,0Ah, 'enter first number: $'
-msg2 db "enter the operator:    +  -  *  /     : $"
-msg3 db "enter second number: $"
-msg4 db  0dh,0ah , 'the approximate result of my calculations is : $' 
-msg5 db  0dh,0ah ,'thank you for using the calculator! press any key... ', 0Dh,0Ah, '$'
-err1 db  "wrong operator!", 0Dh,0Ah , '$'
-smth db  " and something.... $"
-
-; operator can be: '+','-','*','/' or 'q' to exit in the middle.
-opr db '?'
-
-; first and second number:
-num1 dw ?
-num2 dw ?
-
-
+code segment
 start:
-mov dx, offset msg0
-mov ah, 9
-int 21h
+; set segment registers:
+    mov ax, data
+    mov ds, ax
+    mov es, ax
+ 
+;--------------------------------------------------
+;--------------------------------------------------
+;---  C A L C U L A T O R E -------- P R O C ------
+;--------------------------------------------------
+;--------------------------------------------------
 
+call print_screen    
+ 
+begin:
+      reset
+      calc1:
+          
+          number_in x,operand1,lenth
+          mov al,operand1
+          cmp al,'='  
+          je calc1          
+          
+      calc2:
+          number_in y,operand2,lenth
+          mov al,operand2
+          cmp al,'='
+          jne calc1          ;if not '=', restart (invalid input)
+          call calculate
+              
+          putrez buffer,x    ;display result
+          mov x_float_count, 0
+          mov xsighn,0
+          jmp calc1          ;start again for new calculation
+ 
+;--------------------------------------------------
+;--------------------------------------------------
+;-------------  F U N C T I O N S -----------------
+;--------------------------------------------------
+;--------------------------------------------------
+ 
+print_screen proc :
+        gotoxy 10,0;...........
+        putstr l0
+        gotoxy 10,1
+        putstr l8
+        gotoxy 10,2;........  ;
+        putstr l1          ;  ;
+        gotoxy 10,3        ;  ;out cadr
+        putstr l2          ;  ;
+        gotoxy 10,4        ;  ;
+        putstr l3          ;  ;
+        gotoxy 10,5;...... ;  ;
+        putstr l4        ; ;result board + exit key
+        gotoxy 10,6      ; ;  ;
+        putstr l5        ; ;  ;
+        gotoxy 10,7      ; ;  ;
+        putstr l6        ; ;  ;
+        gotoxy 10,8      ; ;  ;
+        putstr l4        ; ;  ;
+        gotoxy 10,9      ;key board
+        putstr l5        ; ;  ;
+        gotoxy 10,10     ; ;  ;
+        putstr l6        ; ;  ;
+        gotoxy 10,11     ; ;  ;
+        putstr l4        ; ;  ;
+        gotoxy 10,12     ; ;  ;
+        putstr l5        ; ;  ;
+        gotoxy 10,13     ; ;  ;
+        putstr l5_2      ; ;  ;
+        gotoxy 10,14     ; ;  ;
+        putstr l4_2      ; ;  ;
+        gotoxy 10,15;..... ;  ;
+        putstr l5_3      ;  ;
+        gotoxy 10,16;.......  ;  
+        putstr l6_2      ;
+        gotoxy 10,17    
+        putstr l7 
+        
+         
+        ;keyboard labels
+        
+        
+        gotoxy 13,6
+        putch '7',14
+        gotoxy 17,6
+        putch '8',14
+        gotoxy 21,6
+        putch '9',14
+        gotoxy 25,6
+        putch '/',11
+        gotoxy 29,6
+        putch 'C',5
+        gotoxy 13,9
+        putch '4',14
+        gotoxy 17,9
+        putch '5',14
+        gotoxy 21,9
+        putch '6',14
+        gotoxy 25,9
+        putch '*',11
+        gotoxy 29,9
+        putch 241,11
+        gotoxy 13,12
+        putch '1',14
+        gotoxy 17,12
+        putch '2',14
+        gotoxy 21,12
+        putch '3',14
+        gotoxy 25,12
+        putch '-',11
+        gotoxy 29,13
+        putch '=',11
+        gotoxy 17,15
+        putch '0',14
+      
+        gotoxy 25,15
+        putch '+',11        
+          
+       
+print_screen endp
+;--------------------------------------------------
+ 
+calculate proc near
+    
+    cmp operand1,'+'
+    je pluss
+    cmp operand1,'-'
+    je miness
+    cmp operand1,'*'
+    je mulplus
+    cmp operand1,'/'
+    je devide
+    jmp begin   ;no match found!
 
-lea dx, msg1
-mov ah, 09h    ; output string at ds:dx
-int 21h  
-
-
-; get the multi-digit signed number
-; from the keyboard, and store
-; the result in cx register:
-
-call scan_num
-
-; store first number:
-mov num1, cx 
-
-
-
-; new line:
-putc 0Dh
-putc 0Ah
-
-
-
-
-lea dx, msg2
-mov ah, 09h     ; output string at ds:dx
-int 21h  
-
-
-; get operator:
-mov ah, 1   ; single char input to AL.
-int 21h
-mov opr, al
-
-
-
-; new line:
-putc 0Dh
-putc 0Ah
-
-
-cmp opr, 'q'      ; q - exit in the middle.
-je exit
-
-cmp opr, '*'
-jb wrong_opr
-cmp opr, '/'
-ja wrong_opr
-
-
-
-
-
-
-; output of a string at ds:dx
-lea dx, msg3
-mov ah, 09h
-int 21h  
-
-
-; get the multi-digit signed number
-; from the keyboard, and store
-; the result in cx register:
-
-call scan_num
-
-
-; store second number:
-mov num2, cx 
-
-
-
-
-lea dx, msg4
-mov ah, 09h      ; output string at ds:dx
-int 21h  
-
-
-
-
-; calculate:
-
-
-
-
-
-cmp opr, '+'
-je do_plus
-
-cmp opr, '-'
-je do_minus
-
-cmp opr, '*'
-je do_mult
-
-cmp opr, '/'
-je do_div
-
-
-; none of the above....
-wrong_opr:
-lea dx, err1
-mov ah, 09h     ; output string at ds:dx
-int 21h  
-
-
+            pluss:              
+                        mov ax,x
+                        add ax,y                        
+                            mov x,ax
+                            ret                   
+                                                                              
+            miness:                                
+                mov ax,x
+                cmp ax,y
+                jae mi3
+                jb mi4
+                
+                mi3:            ; neu x >= y 
+                    mov ax,x
+                    sub ax,y
+                    mov x,ax
+                    mov xsighn,0
+                    ret
+                mi4:            ; neu x  < y , cho xsighn = 1 de lam dau - ;
+                    mov ax,y
+                    sub ax,x
+                    mov x,ax
+                    mov xsighn,1
+                    ret
+                    
+           mulplus:
+                    mov ax, x
+                    mov bx, y
+                    mul bx       
+                    mov x, ax
+                    ret
+       
+                   
+                            
+            devide:
+                    xor dx, dx
+                    mov ax, x
+                    mov bx, 10
+                    mul bx           
+                    mov bx, y
+                    xor dx, dx
+                    div bx           
+                    mov x, ax        ;
+                    mov x_float_count, 1  ; 
+                    ret                    
+calculate endp
+;---------------------------------------------------                           
+ 
 exit:
-; output of a string at ds:dx
-lea dx, msg5
-mov ah, 09h
-int 21h  
-
-
-; wait for any key...
-mov ah, 0
-int 16h
-
-
-ret  ; return back to os.
-
-
-do_plus:
-
-
-mov ax, num1
-add ax, num2
-call print_num    ; print ax value.
-
-jmp exit
-
-
-
-do_minus:
-
-mov ax, num1
-sub ax, num2
-call print_num    ; print ax value.
-
-jmp exit
-
-
-
-
-do_mult:
-
-mov ax, num1
-imul num2 ; (dx ax) = ax * num2. 
-call print_num    ; print ax value.
-; dx is ignored (calc works with tiny numbers only).
-
-jmp exit
-
-
-
-
-do_div:
-    ; Chu?n b? cho phép chia
-    xor dx, dx       ; Xóa DX (d?t l?i ph?n du)
-    mov ax, num1     ; Ðua s? th? nh?t vào AX
-    idiv num2        ; Th?c hi?n chia: AX = (DX:AX) / num2
-
-    ; In ph?n nguyên c?a phép chia
-    call print_num   ; In k?t qu? trong AX (ph?n nguyên)
-
-    ; Ki?m tra n?u có du
-    cmp dx, 0        ; Ki?m tra ph?n du có b?ng 0 không?
-    je exit_div      ; N?u không có du, thoát ra
-
-    ; In d?u th?p phân
-    putc '.'
-
-    ; Tính và in ph?n th?p phân (4 ch? s?)
-    mov cx, 10       ; Ð?t h? s? nhân cho ch? s? th?p phân d?u tiên
-    mov si, 4        ; Gi?i h?n in ra 4 ch? s? th?p phân
-decimal_loop:
-    mov ax, dx       ; Ðua ph?n du vào AX
-    xor dx, dx       ; Xóa DX tru?c khi nhân
-    mul cx           ; Nhân ph?n du v?i 10
-    div num2         ; Chia cho s? th? hai
-    push dx          ; Luu ph?n du t?m th?i d? ki?m tra làm tròn
-    add al, '0'      ; Chuy?n d?i sang mã ASCII
-    putc al          ; In ch? s? th?p phân
-    pop dx           ; Ph?c h?i ph?n du
-    dec si           ; Gi?m b? d?m s? ch? s? th?p phân
-    jz check_round   ; N?u dã in 4 ch? s?, ki?m tra làm tròn
-    cmp dx, 0        ; Ki?m tra n?u ph?n du là 0
-    je exit_div      ; Thoát n?u không còn ph?n du
-    jmp decimal_loop ; L?p l?i cho các ch? s? th?p phân ti?p theo
-
-check_round:
-    ; Ki?m tra ch? s? th? 5 d? làm tròn
-    mov ax, dx       ; Ðua ph?n du vào AX
-    xor dx, dx       ; Xóa DX tru?c khi nhân
-    mul cx           ; Nhân ph?n du v?i 10
-    div num2         ; Chia cho s? th? hai
-    cmp al, '5'      ; Ki?m tra n?u ch? s? th? 5 >= 5
-    jb exit_div      ; N?u nh? hon 5, không c?n làm tròn
-    ; Làm tròn ch? s? th? 4
-    mov ah, 0        ; Xóa AH
-    add byte ptr [bp-1], 1 ; Tang ch? s? th? 4 lên 1 (b? nh? t?m)
-    jmp exit_div
-
-exit_div:
-    ret              ; Thoát kh?i do?n mã
-
-
-
-
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; these functions are copied from emu8086.inc ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-; gets the multi-digit SIGNED number from the keyboard,
-; and stores the result in CX register:
-SCAN_NUM        PROC    NEAR
-        PUSH    DX
-        PUSH    AX
-        PUSH    SI
-        
-        MOV     CX, 0
-
-        ; reset flag:
-        MOV     CS:make_minus, 0
-
-next_digit:
-
-        ; get char from keyboard
-        ; into AL:
-        MOV     AH, 00h
-        INT     16h
-        ; and print it:
-        MOV     AH, 0Eh
-        INT     10h
-
-        ; check for MINUS:
-        CMP     AL, '-'
-        JE      set_minus
-
-        ; check for ENTER key:
-        CMP     AL, 0Dh  ; carriage return?
-        JNE     not_cr
-        JMP     stop_input
-not_cr:
-
-
-        CMP     AL, 8                   ; 'BACKSPACE' pressed?
-        JNE     backspace_checked
-        MOV     DX, 0                   ; remove last digit by
-        MOV     AX, CX                  ; division:
-        DIV     CS:ten                  ; AX = DX:AX / 10 (DX-rem).
-        MOV     CX, AX
-        PUTC    ' '                     ; clear position.
-        PUTC    8                       ; backspace again.
-        JMP     next_digit
-backspace_checked:
-
-
-        ; allow only digits:
-        CMP     AL, '0'
-        JAE     ok_AE_0
-        JMP     remove_not_digit
-ok_AE_0:        
-        CMP     AL, '9'
-        JBE     ok_digit
-remove_not_digit:       
-        PUTC    8       ; backspace.
-        PUTC    ' '     ; clear last entered not digit.
-        PUTC    8       ; backspace again.        
-        JMP     next_digit ; wait for next input.       
-ok_digit:
-
-
-        ; multiply CX by 10 (first time the result is zero)
-        PUSH    AX
-        MOV     AX, CX
-        MUL     CS:ten                  ; DX:AX = AX*10
-        MOV     CX, AX
-        POP     AX
-
-        ; check if the number is too big
-        ; (result should be 16 bits)
-        CMP     DX, 0
-        JNE     too_big
-
-        ; convert from ASCII code:
-        SUB     AL, 30h
-
-        ; add AL to CX:
-        MOV     AH, 0
-        MOV     DX, CX      ; backup, in case the result will be too big.
-        ADD     CX, AX
-        JC      too_big2    ; jump if the number is too big.
-
-        JMP     next_digit
-
-set_minus:
-        MOV     CS:make_minus, 1
-        JMP     next_digit
-
-too_big2:
-        MOV     CX, DX      ; restore the backuped value before add.
-        MOV     DX, 0       ; DX was zero before backup!
-too_big:
-        MOV     AX, CX
-        DIV     CS:ten  ; reverse last DX:AX = AX*10, make AX = DX:AX / 10
-        MOV     CX, AX
-        PUTC    8       ; backspace.
-        PUTC    ' '     ; clear last entered digit.
-        PUTC    8       ; backspace again.        
-        JMP     next_digit ; wait for Enter/Backspace.
-        
-        
-stop_input:
-        ; check flag:
-        CMP     CS:make_minus, 0
-        JE      not_minus
-        NEG     CX
-not_minus:
-
-        POP     SI
-        POP     AX
-        POP     DX
-        RET
-make_minus      DB      ?       ; used as a flag.
-SCAN_NUM        ENDP
-
-
-
-
-
-; this procedure prints number in AX,
-; used with PRINT_NUM_UNS to print signed numbers:
-PRINT_NUM       PROC    NEAR
-        PUSH    DX
-        PUSH    AX
-
-        CMP     AX, 0
-        JNZ     not_zero
-
-        PUTC    '0'
-        JMP     printed
-
-not_zero:
-        ; the check SIGN of AX,
-        ; make absolute if it's negative:
-        CMP     AX, 0
-        JNS     positive
-        NEG     AX
-
-        PUTC    '-'
-
-positive:
-        CALL    PRINT_NUM_UNS
-printed:
-        POP     AX
-        POP     DX
-        RET
-PRINT_NUM       ENDP
-
-
-
-; this procedure prints out an unsigned
-; number in AX (not just a single digit)
-; allowed values are from 0 to 65535 (FFFF)
-PRINT_NUM_UNS   PROC    NEAR
-        PUSH    AX
-        PUSH    BX
-        PUSH    CX
-        PUSH    DX
-
-        ; flag to prevent printing zeros before number:
-        MOV     CX, 1
-
-        ; (result of "/ 10000" is always less or equal to 9).
-        MOV     BX, 10000       ; 2710h - divider.
-
-        ; AX is zero?
-        CMP     AX, 0
-        JZ      print_zero
-
-begin_print:
-
-        ; check divider (if zero go to end_print):
-        CMP     BX,0
-        JZ      end_print
-
-        ; avoid printing zeros before number:
-        CMP     CX, 0
-        JE      calc
-        ; if AX<BX then result of DIV will be zero:
-        CMP     AX, BX
-        JB      skip
-calc:
-        MOV     CX, 0   ; set flag.
-
-        MOV     DX, 0
-        DIV     BX      ; AX = DX:AX / BX   (DX=remainder).
-
-        ; print last digit
-        ; AH is always ZERO, so it's ignored
-        ADD     AL, 30h    ; convert to ASCII code.
-        PUTC    AL
-
-
-        MOV     AX, DX  ; get remainder from last div.
-
-skip:
-        ; calculate BX=BX/10
-        PUSH    AX
-        MOV     DX, 0
-        MOV     AX, BX
-        DIV     CS:ten  ; AX = DX:AX / 10   (DX=remainder).
-        MOV     BX, AX
-        POP     AX
-
-        JMP     begin_print
-        
-print_zero:
-        PUTC    '0'
-        
-end_print:
-
-        POP     DX
-        POP     CX
-        POP     BX
-        POP     AX
-        RET
-PRINT_NUM_UNS   ENDP
-
-
-
-ten             DW      10      ; used as multiplier/divider by SCAN_NUM & PRINT_NUM_UNS.
-
-
-
-
-
-
-
-GET_STRING      PROC    NEAR
-PUSH    AX
-PUSH    CX
-PUSH    DI
-PUSH    DX
-
-MOV     CX, 0                   ; char counter.
-
-CMP     DX, 1                   ; buffer too small?
-JBE     empty_buffer            ;
-
-DEC     DX                      ; reserve space for last zero.
-
-
-;============================
-; Eternal loop to get
-; and processes key presses:
-
-wait_for_key:
-
-MOV     AH, 0                   ; get pressed key.
-INT     16h
-
-CMP     AL, 0Dh                  ; 'RETURN' pressed?
-JZ      exit_GET_STRING
-
-
-CMP     AL, 8                   ; 'BACKSPACE' pressed?
-JNE     add_to_buffer
-JCXZ    wait_for_key            ; nothing to remove!
-DEC     CX
-DEC     DI
-PUTC    8                       ; backspace.
-PUTC    ' '                     ; clear position.
-PUTC    8                       ; backspace again.
-JMP     wait_for_key
-
-add_to_buffer:
-
-        CMP     CX, DX          ; buffer is full?
-        JAE     wait_for_key    ; if so wait for 'BACKSPACE' or 'RETURN'...
-
-        MOV     [DI], AL
-        INC     DI
-        INC     CX
-        
-        ; print the key:
-        MOV     AH, 0Eh
-        INT     10h
-
-JMP     wait_for_key
-;============================
-
-exit_GET_STRING:
-
-; terminate by null:
-MOV     [DI], 0
-
-empty_buffer:
-
-POP     DX
-POP     DI
-POP     CX
-POP     AX
-RET
-GET_STRING      ENDP
-
-
+ 
+    mov ax, 4c00h ; exit 
+    int 21h    
+ends
+ 
+end start
