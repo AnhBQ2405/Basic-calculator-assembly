@@ -1,8 +1,8 @@
-data segment
+.model small 
+.stack 100h 
+.data
    
-
 x_float_count db 0
-_TEN     dw 10d
 x        dw 0    
 y        dw 0
 buffer   db 6 dup(0),'$'
@@ -10,7 +10,6 @@ lenth    dw 0
 operand1 db 0
 operand2 db 0
 key      db 0  
-ng       db 0
 xsighn   db 0
 ;---------------------------------------------------
  
@@ -149,7 +148,7 @@ store_operand:
     mov dx, 0
     mov bx, 10
 
-l3:
+l3:                          ; in ra ket qua 
     mov ax, dx
     mul bx
     mov dx, ax
@@ -239,18 +238,15 @@ reset macro
 endm
 
 
-code segment
+.code
+
 start:
 ; set segment registers:
-    mov ax, data
+    mov ax, @data
     mov ds, ax
-    mov es, ax
+    
  
-;--------------------------------------------------
-;--------------------------------------------------
-;---  C A L C U L A T O R E -------- P R O C ------
-;--------------------------------------------------
-;--------------------------------------------------
+
 
 call print_screen    
  
@@ -275,10 +271,7 @@ begin:
           mov xsighn,0
           jmp calc1          ;start again for new calculation
  
-;--------------------------------------------------
-;--------------------------------------------------
-;-------------  F U N C T I O N S -----------------
-;--------------------------------------------------
+
 ;--------------------------------------------------
  
 print_screen proc :
@@ -363,25 +356,25 @@ print_screen proc :
 print_screen endp
 ;--------------------------------------------------
  
-calculate proc near
+calculate proc 
     
     cmp operand1,'+'
-    je pluss
+    je plus
     cmp operand1,'-'
-    je miness
+    je minus
     cmp operand1,'*'
-    je mulplus
+    je mult
     cmp operand1,'/'
     je devide
     jmp begin   ;no match found!
 
-            pluss:              
+            plus:              
                         mov ax,x
                         add ax,y                        
                             mov x,ax
                             ret                   
                                                                               
-            miness:                                
+            minus:                                
                 mov ax,x
                 cmp ax,y
                 jae mi3
@@ -400,7 +393,7 @@ calculate proc near
                     mov xsighn,1
                     ret
                     
-           mulplus:
+            mult:
                     mov ax, x
                     mov bx, y
                     mul bx       
